@@ -1,4 +1,0 @@
-﻿
-> unified-dashboard@0.1.0 lint C:\Users\T\Desktop\Unified Dashboard\unified-dashboard
-> eslint
-
