@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { IntegrationStatus } from "@/generated/prisma/client";
+import { IntegrationStatus } from "@prisma/client";
 import { PipelineRegistry } from "./registry";
 import { PrismaMetricPersister } from "./persister";
 

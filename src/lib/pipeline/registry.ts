@@ -1,4 +1,4 @@
-import { IntegrationProvider } from "@/generated/prisma/client";
+import { IntegrationProvider } from "@prisma/client";
 import { MetricFetcher, MetricNormalizer, RawMetricData, UnifiedMetricSnapshot } from "./types";
 import { SentryFetcher } from "./fetchers/sentry-fetcher";
 import { VercelFetcher } from "./fetchers/vercel-fetcher";

@@ -1,4 +1,4 @@
-import { Alert, AlertHistory } from "@/generated/prisma/client";
+import { Alert, AlertHistory, AlertType, MetricSeries, Workspace } from "@prisma/client";
 import { AlertDispatcher } from "../dispatcher";
 
 export class TelegramDispatcher implements AlertDispatcher {
@@ -16,7 +16,7 @@ export class TelegramDispatcher implements AlertDispatcher {
             return;
         }
 
-        const message = `🚨 *Unified Dashboard Alert*\n\n**Message:** ${history.message}\n**Value:** ${history.value}\n**Time:** ${new Date().toLocaleTimeString()}`;
+        const message = `🚨 * Unified Dashboard Alert *\n\n ** Message:** ${history.message} \n ** Value:** ${history.value} \n ** Time:** ${new Date().toLocaleTimeString()} `;
 
         try {
             await fetch(`https://api.telegram.org/bot${this.token}/sendMessage`, {

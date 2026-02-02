@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { deleteIntegration } from "@/app/actions/integration-actions";
 import Link from "next/link";
-import { IntegrationStatus } from "@/generated/prisma/client";
+import { IntegrationStatus } from "@prisma/client";
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
     const { userId } = await auth();

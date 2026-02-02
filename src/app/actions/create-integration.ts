@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { IntegrationService } from "@/lib/services/integration-service";
-import { IntegrationProvider } from "@/generated/prisma/client";
+import { IntegrationProvider } from "@prisma/client";
 import { auth } from "@clerk/nextjs/server";
 
 export async function createIntegration(_prevState: any, formData: FormData) {

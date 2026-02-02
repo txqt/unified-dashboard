@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Role } from "@/generated/prisma/client";
+import { Role } from "@prisma/client";
 
 export async function createWorkspace(formData: FormData) {
     const { userId } = await auth();

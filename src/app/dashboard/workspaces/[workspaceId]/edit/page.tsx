@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Role } from "@/generated/prisma/client";
+import { Role } from "@prisma/client";
 import { updateWorkspace, deleteWorkspace } from "@/app/actions/workspace-actions";
 import Link from "next/link";
 

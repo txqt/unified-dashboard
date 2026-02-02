@@ -1,4 +1,4 @@
-import { Alert, AlertHistory } from "@/generated/prisma/client";
+import { Alert, AlertHistory, AlertType } from "@prisma/client";
 import { TelegramDispatcher } from "./dispatchers/telegram";
 
 export interface AlertDispatcher {

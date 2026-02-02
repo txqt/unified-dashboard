@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { MetricPersister, UnifiedMetricSnapshot } from "./types";
-import { AlertType } from "@/generated/prisma/client";
+import { AlertType, MetricSnapshot } from "@prisma/client";
 import { DispatcherRegistry } from "@/lib/alerting/dispatcher";
 
 export class PrismaMetricPersister implements MetricPersister {

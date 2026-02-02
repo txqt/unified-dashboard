@@ -1,4 +1,4 @@
-import { IntegrationProvider } from "@/generated/prisma/client";
+import { IntegrationProvider } from "@prisma/client";
 
 // The raw data shape returned by a provider's API
 // This is untyped effectively, as every provider is different

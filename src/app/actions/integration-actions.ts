@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { Role } from "@/generated/prisma/client";
+import { Role } from "@prisma/client";
 
 export async function deleteIntegration(formData: FormData) {
     const { userId } = await auth();

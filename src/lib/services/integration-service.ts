@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { VaultService } from "@/lib/vault";
-import { IntegrationProvider, IntegrationStatus } from "@/generated/prisma/client";
+import { Integration, IntegrationProvider, IntegrationStatus } from "@prisma/client";
 
 export class IntegrationService {
     /**
