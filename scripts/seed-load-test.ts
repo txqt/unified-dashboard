@@ -1,6 +1,6 @@
 import { prisma } from "../src/lib/prisma";
 import { VaultService } from "../src/lib/vault";
-import { IntegrationProvider, IntegrationStatus } from "../src/generated/prisma/client";
+import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 
 // MOCK DATA GENERATOR
 async function main() {
