@@ -90,8 +90,8 @@ export default async function DashboardLayout({
             <aside className="fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r border-slate-800 bg-slate-950 hidden lg:block">
                 <nav className="flex flex-col gap-1 p-4">
                     <SidebarLink href="/dashboard" icon="home" label="Overview" />
-                    <SidebarLink href="/dashboard/workspaces/new" icon="plus" label="Workspaces" />
-                    <SidebarLink href="/dashboard/integrations/new" icon="plug" label="Integrations" />
+                    <SidebarLink href="/dashboard/workspaces" icon="plus" label="Workspaces" />
+                    <SidebarLink href="/dashboard/integrations" icon="plug" label="Integrations" />
                     <SidebarLink href="/dashboard/alerts" icon="bell" label="Alerts" />
                     <SidebarLink href="/dashboard/settings" icon="settings" label="Settings" />
                 </nav>

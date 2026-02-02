@@ -6,10 +6,10 @@ import { IntegrationService } from "@/lib/services/integration-service";
 import { IntegrationProvider } from "@/generated/prisma/client";
 import { auth } from "@clerk/nextjs/server";
 
-export async function createIntegration(formData: FormData) {
+export async function createIntegration(_prevState: any, formData: FormData) {
     const { userId } = await auth();
     if (!userId) {
-        throw new Error("Unauthorized");
+        return { error: "Unauthorized" };
     }
 
     const workspaceId = formData.get("workspaceId") as string;
@@ -19,7 +19,7 @@ export async function createIntegration(formData: FormData) {
     const orgSlug = formData.get("orgSlug") as string;
 
     if (!workspaceId || !provider || !secretValue) {
-        throw new Error("Missing required fields");
+        return { error: "Missing required fields" };
     }
 
     // Construct metadata based on provider
@@ -29,6 +29,22 @@ export async function createIntegration(formData: FormData) {
 
     if (provider === "SENTRY" && orgSlug) {
         publicMetadata.organizationSlug = orgSlug;
+    }
+
+    const prisma = (await import("@/lib/prisma")).default;
+
+    // Check for existing integration to avoid Unique constraint error
+    const existing = await prisma.integration.findUnique({
+        where: {
+            workspaceId_provider: {
+                workspaceId,
+                provider
+            }
+        }
+    });
+
+    if (existing) {
+        return { error: `Workspace already has a ${provider} integration.` };
     }
 
     try {
@@ -41,8 +57,6 @@ export async function createIntegration(formData: FormData) {
 
         // AUTO-PROVISION METRICS based on Provider
         // This ensures the user sees something immediately.
-        const prisma = (await import("@/lib/prisma")).default;
-
         if (provider === "SENTRY") {
             await prisma.metricSeries.create({
                 data: {
@@ -79,19 +93,14 @@ export async function createIntegration(formData: FormData) {
         }
 
         // TRIGGER INITIAL FETCH
-        // We import dynamically to avoid heavier cold start on the action if possible
+        console.log("Triggering initial sync...");
         const { PipelineWorker } = await import("@/lib/pipeline/worker");
         const worker = new PipelineWorker();
-        // In a real background job system, we would enqueue this. 
-        // For MVP, we await it briefly or fire-and-forget (but Vercel functions might kill it).
-        // Let's await it to ensure 'success' means 'data is there'.
-        console.log("Triggering initial sync...");
         await worker.runSync();
 
     } catch (error) {
         console.error("Failed to create integration:", error);
-        // In a real app, return form errors. For MVP, throw.
-        throw new Error("Failed to create integration");
+        return { error: error instanceof Error ? error.message : "Failed to create integration" };
     }
 
     revalidatePath("/dashboard");
