@@ -1,0 +1,25 @@
+import { SignIn } from "@clerk/nextjs";
+
+export default function SignInPage() {
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            <SignIn
+                appearance={{
+                    elements: {
+                        formButtonPrimary:
+                            "bg-indigo-600 hover:bg-indigo-700 text-sm normal-case",
+                        card: "bg-slate-900 border border-slate-800",
+                        headerTitle: "text-white",
+                        headerSubtitle: "text-slate-400",
+                        socialButtonsBlockButton:
+                            "bg-slate-800 border-slate-700 text-white hover:bg-slate-700",
+                        formFieldLabel: "text-slate-300",
+                        formFieldInput:
+                            "bg-slate-800 border-slate-700 text-white placeholder:text-slate-500",
+                        footerActionLink: "text-indigo-400 hover:text-indigo-300",
+                    },
+                }}
+            />
+        </div>
+    );
+}

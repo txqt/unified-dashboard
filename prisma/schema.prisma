@@ -1,0 +1,184 @@
+// Unified Dashboard - Multi-App SaaS Metrics
+// Code-First Prisma Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// MULTI-TENANT MODELS
+// ============================================
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members      WorkspaceMember[]
+  integrations Integration[]
+  metricSeries MetricSeries[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String   // Clerk user ID
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================
+// INTEGRATION MODELS
+// ============================================
+
+model Integration {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  provider        IntegrationProvider
+  status          IntegrationStatus @default(PENDING)
+  secretId        String?           // Reference to encrypted secrets table
+  publicMetadata  Json?             // Non-sensitive: account name, provider version
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  metricSeries MetricSeries[]
+
+  @@unique([workspaceId, provider])
+  @@index([workspaceId])
+  @@map("integrations")
+}
+
+enum IntegrationProvider {
+  SENTRY
+  VERCEL
+  STRIPE
+  POSTHOG
+  INTERCOM
+}
+
+enum IntegrationStatus {
+  PENDING
+  ACTIVE
+  ERROR
+  DISCONNECTED
+}
+
+// ============================================
+// SECRETS VAULT (AES-256-GCM Encrypted)
+// ============================================
+
+model Secret {
+  id            String   @id @default(cuid())
+  encryptedData Bytes    // AES-256-GCM encrypted blob
+  iv            Bytes    // Initialization vector
+  authTag       Bytes    // Authentication tag
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("secrets")
+}
+
+// ============================================
+// METRIC MODELS
+// ============================================
+
+model MetricSeries {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  integrationId String
+  metricKey     String    // e.g., "sentry.unresolved_issues", "vercel.health_score"
+  displayName   String
+  settings      Json?     // Thresholds, aggregation rules
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  integration Integration      @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  snapshots   MetricSnapshot[]
+  alerts      Alert[]
+
+  @@unique([integrationId, metricKey])
+  @@index([workspaceId])
+  @@index([integrationId])
+  @@map("metric_series")
+}
+
+model MetricSnapshot {
+  id         String   @id @default(cuid())
+  seriesId   String
+  value      Float
+  capturedAt DateTime @default(now())
+
+  // Relations
+  series MetricSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@index([seriesId, capturedAt(sort: Desc)])
+  @@map("metric_snapshots")
+}
+
+// ============================================
+// ALERT MODELS
+// ============================================
+
+model Alert {
+  id             String      @id @default(cuid())
+  metricSeriesId String
+  type           AlertType
+  threshold      Float
+  enabled        Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  series        MetricSeries   @relation(fields: [metricSeriesId], references: [id], onDelete: Cascade)
+  notifications AlertHistory[]
+
+  @@map("alerts")
+}
+
+enum AlertType {
+  ABOVE_THRESHOLD
+  BELOW_THRESHOLD
+  CHANGE_PERCENT
+}
+
+model AlertHistory {
+  id          String   @id @default(cuid())
+  alertId     String
+  triggeredAt DateTime @default(now())
+  value       Float
+  message     String
+  dispatched  Boolean  @default(false)
+
+  // Relations
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@index([alertId, triggeredAt(sort: Desc)])
+  @@map("alert_history")
+}
