@@ -1,0 +1,4 @@
+{
+    "installCommand": "corepack enable pnpm && pnpm install",
+    "buildCommand": "prisma generate && next build"
+}

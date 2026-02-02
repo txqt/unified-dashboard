@@ -3,7 +3,7 @@ import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
 const ALGORITHM = "aes-256-gcm";
 const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 12; // 96 bits for GCM
-const AUTH_TAG_LENGTH = 16; // 128 bits standard
+
 
 // Ensure ENCRYPTION_KEY is set and valid
 const getMasterKey = () => {

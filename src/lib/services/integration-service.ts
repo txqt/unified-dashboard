@@ -25,9 +25,9 @@ export class IntegrationService {
         return await prisma.$transaction(async (tx) => {
             const secret = await tx.secret.create({
                 data: {
-                    encryptedData: encryptedData as any,
-                    iv: iv as any,
-                    authTag: authTag as any,
+                    encryptedData: new Uint8Array(encryptedData),
+                    iv: new Uint8Array(iv),
+                    authTag: new Uint8Array(authTag),
                 },
             });
 
@@ -37,7 +37,8 @@ export class IntegrationService {
                     provider,
                     status: IntegrationStatus.ACTIVE,
                     secretId: secret.id,
-                    publicMetadata: publicMetadata as any,
+                    // @ts-expect-error - Json in Prisma is tricky with generic records
+                    publicMetadata: publicMetadata,
                 },
             });
 

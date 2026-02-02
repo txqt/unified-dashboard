@@ -9,13 +9,7 @@ const isProtectedRoute = createRouteMatcher([
   "/api/integrations(.*)",
 ]);
 
-// Define public routes
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhooks(.*)",
-]);
+
 
 export default clerkMiddleware(async (auth, req) => {
   // Protect all dashboard routes

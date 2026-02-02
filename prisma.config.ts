@@ -10,7 +10,5 @@ export default defineConfig({
   datasource: {
     // Pooled connection for queries
     url: process.env["DATABASE_URL"],
-    // Direct connection for migrations
-    directUrl: process.env["DIRECT_URL"],
   },
 });

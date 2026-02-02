@@ -42,7 +42,7 @@ export class SentryNormalizer implements MetricNormalizer {
 
 export class VercelNormalizer implements MetricNormalizer {
     normalize(data: RawMetricData, metricKey: string): UnifiedMetricSnapshot[] {
-        const typedData = data as { value: number; timestamp: string; meta: any };
+        const typedData = data as { value: number; timestamp: string; meta: Record<string, unknown> };
 
         return [{
             metricKey,

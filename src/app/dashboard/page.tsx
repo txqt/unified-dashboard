@@ -46,7 +46,7 @@ export default async function DashboardPage() {
             <div>
                 <h1 className="text-2xl font-bold text-white">Dashboard</h1>
                 <p className="text-slate-400">
-                    Welcome back! Here's your SaaS health overview.
+                    Welcome back! Here&apos;s your SaaS health overview.
                 </p>
             </div>
 

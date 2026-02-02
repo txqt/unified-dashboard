@@ -38,7 +38,8 @@ export class PipelineWorker {
                     const rawData = await fetcher.fetch(integration.id, metricKey, settings);
 
                     // B. Normalize
-                    const snapshots = normalizer.normalize(rawData, metricKey);
+                    const result = normalizer.normalize(rawData, metricKey);
+                    const snapshots = Array.isArray(result) ? result : [result];
 
                     // C. Persist
                     await this.persister.persist(series.id, snapshots);

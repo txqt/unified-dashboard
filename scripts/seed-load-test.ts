@@ -26,9 +26,9 @@ async function main() {
     // Create a reusable mock secret
     const secret = await prisma.secret.create({
         data: {
-            encryptedData: encryptedData as any,
-            iv: iv as any,
-            authTag: authTag as any
+            encryptedData: new Uint8Array(encryptedData),
+            iv: new Uint8Array(iv),
+            authTag: new Uint8Array(authTag)
         },
     });
 

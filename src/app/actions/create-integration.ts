@@ -23,7 +23,7 @@ export async function createIntegration(formData: FormData) {
     }
 
     // Construct metadata based on provider
-    const publicMetadata: Record<string, any> = {
+    const publicMetadata: Record<string, unknown> = {
         projectSlug,
     };
 
