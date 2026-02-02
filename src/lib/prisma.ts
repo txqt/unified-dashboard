@@ -7,9 +7,12 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Use adapter pattern for Prisma 7 compatibility
-const connectionString = process.env.DATABASE_URL!;
+const connectionString = process.env.DATABASE_URL;
 
-const pool = new Pool({ connectionString });
+const pool = new Pool({
+    connectionString,
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+});
 const adapter = new PrismaPg(pool);
 
 export const prisma =
