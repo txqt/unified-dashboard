@@ -116,6 +116,8 @@ export function NewIntegrationForm({
                             <option value="SENTRY">Sentry</option>
                             <option value="VERCEL">Vercel</option>
                             <option value="POSTHOG">PostHog</option>
+                            <option value="STRIPE">Stripe</option>
+                            <option value="INTERCOM">Intercom</option>
                         </select>
                     </div>
 
