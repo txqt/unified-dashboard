@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
+import { cookies } from "next/headers";
 
 export default async function DashboardLayout({
     children,
@@ -20,9 +21,26 @@ export default async function DashboardLayout({
     const memberships = await prisma.workspaceMember.findMany({
         where: { userId },
         include: { workspace: true },
+        orderBy: { workspace: { createdAt: 'desc' } }
     });
 
     const workspaces = memberships.map((m) => m.workspace);
+
+    // Determine active workspace
+    const cookieStore = await cookies();
+    const cookieWorkspaceId = cookieStore.get("unified_workspace_id")?.value;
+
+    // Validate that user is actually a member of the cookie workspace
+    const validCookieWorkspace = workspaces.find(w => w.id === cookieWorkspaceId);
+
+    // Default to first workspace if no valid cookie
+    const currentWorkspaceId = validCookieWorkspace?.id || workspaces[0]?.id;
+
+    // If we fell back to a default and there wasn't a valid cookie, 
+    // we technically "should" set the cookie, but purely server-side layout rendering 
+    // shouldn't perform mutations (like setting cookies) easily without middleware/actions.
+    // We'll rely on the client or subsequent actions to set it if needed, 
+    // or just treat "no cookie" as "viewing default".
 
     return (
         <div className="min-h-screen bg-slate-950">
@@ -39,7 +57,10 @@ export default async function DashboardLayout({
                         </Link>
 
                         {/* Workspace Switcher */}
-                        <WorkspaceSwitcher workspaces={workspaces} />
+                        <WorkspaceSwitcher
+                            workspaces={workspaces}
+                            currentWorkspaceId={currentWorkspaceId}
+                        />
                     </div>
 
                     {/* Right Side */}

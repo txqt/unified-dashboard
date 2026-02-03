@@ -1,5 +1,7 @@
 "use client";
 
+import { switchWorkspace } from "@/app/actions/workspace-actions";
+
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -39,15 +41,14 @@ export function WorkspaceSwitcher({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const handleSelect = (workspaceId: string) => {
+    const handleSelect = async (workspaceId: string) => {
         setIsOpen(false);
-        // Reload to refresh the layout context (or navigate if we had a workspace slug in URL)
-        // For now, let's assume we stick to dashboard or navigate to a workspace specific view
-        // Since current architecture seems to use session/context mostly, we might just want to 
-        // force a refresh or navigate to a specific route.
-        // Given the layout doesn't use [workspaceId] param yet, we'll just log it or refresh.
-        console.log("Switched to workspace", workspaceId);
-        // Ideally: router.push(`/dashboard/${workspaceId}`);
+        try {
+            await switchWorkspace(workspaceId);
+            router.refresh();
+        } catch (error) {
+            console.error("Failed to switch workspace:", error);
+        }
     };
 
     return (

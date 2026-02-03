@@ -5,6 +5,8 @@ import Link from "next/link";
 import { StatCard } from "@/components/dashboard/stat-card";
 // import { MetricCardPlaceholder } from "@/components/dashboard/metric-card-placeholder"; // Unused if we have real data logic
 
+import { cookies } from "next/headers";
+
 export default async function DashboardPage() {
     const { userId } = await auth();
 
@@ -12,33 +14,58 @@ export default async function DashboardPage() {
         redirect("/sign-in");
     }
 
-    // Fetch workspaces user is a member of
-    // For Real Logic: We need to filter by Active Workspace. 
-    // For MVP: We show ALL metrics from ALL workspaces the user is in.
-    const members = await prisma.workspaceMember.findMany({
+    // 1. Fetch all memberships to get total count and validate access
+    const allMemberships = await prisma.workspaceMember.findMany({
         where: { userId },
-        include: {
-            workspace: {
-                include: {
-                    metricSeries: {
-                        include: {
-                            snapshots: {
-                                orderBy: { capturedAt: 'desc' },
-                                take: 1
-                            },
-                            integration: true
-                        }
+        include: { workspace: true },
+        orderBy: { workspace: { createdAt: 'desc' } }
+    });
+
+    if (allMemberships.length === 0) {
+        // UI handles empty state below with empty allSeries
+    }
+
+    // 2. Determine Scope (Active Workspace)
+    const cookieStore = await cookies();
+    const cookieWorkspaceId = cookieStore.get("unified_workspace_id")?.value;
+    const activeMembership = allMemberships.find(m => m.workspaceId === cookieWorkspaceId) || allMemberships[0];
+
+    // 3. Fetch Metrics only for Active Workspace (if exists)
+    let activeWorkspaceData = null;
+    if (activeMembership) {
+        activeWorkspaceData = await prisma.workspace.findUnique({
+            where: { id: activeMembership.workspaceId },
+            include: {
+                metricSeries: {
+                    include: {
+                        snapshots: {
+                            orderBy: { capturedAt: 'desc' },
+                            take: 1
+                        },
+                        integration: true
                     }
                 }
             }
-        }
-    });
+        });
+    }
 
-    const allSeries = members.flatMap(m => m.workspace.metricSeries);
+    const allSeries = activeWorkspaceData?.metricSeries || [];
 
     // Calculate stats
-    const totalWorkspaces = members.length;
-    const totalIntegrations = members.reduce((acc, m) => acc + m.workspace.metricSeries.length, 0); // Approx
+    const totalWorkspaces = allMemberships.length;
+    // Count integrations for the ACTIVE workspace
+    const totalIntegrations = allSeries.reduce((acc, series) => {
+        // This logic was flawed in original code (counting series length as integrations).
+        // Let's improve it by counting unique integration IDs in the series or just fetching integrations count.
+        // For MVP speed, let's just stick to the previous approximation or fix it slightly.
+        // Better: activeWorkspaceData?.metricSeries.length is actually "Total Metrics".
+        return acc + 1;
+    }, 0);
+
+    // Actually, let's fetch real integration count for the active workspace
+    const realIntegrationCount = activeMembership ? await prisma.integration.count({
+        where: { workspaceId: activeMembership.workspaceId }
+    }) : 0;
 
     return (
         <div className="space-y-8">
@@ -46,7 +73,7 @@ export default async function DashboardPage() {
             <div>
                 <h1 className="text-2xl font-bold text-white">Dashboard</h1>
                 <p className="text-slate-400">
-                    Welcome back! Here&apos;s your SaaS health overview.
+                    Overview for <span className="text-white font-medium">{activeWorkspaceData?.name || "All Workspaces"}</span>
                 </p>
             </div>
 
@@ -59,7 +86,7 @@ export default async function DashboardPage() {
                 />
                 <StatCard
                     title="Active Integrations"
-                    value={totalIntegrations.toString()}
+                    value={realIntegrationCount.toString()}
                     trend="neutral"
                 />
             </div>

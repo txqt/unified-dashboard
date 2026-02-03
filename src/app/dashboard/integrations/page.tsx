@@ -16,6 +16,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Settings, Trash2 } from "lucide-react";
 
+import { cookies } from "next/headers";
+
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
     const { userId } = await auth();
     if (!userId) redirect("/sign-in");
@@ -23,7 +25,13 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     const params = await searchParams;
     let workspaceId = params.workspace;
 
-    // Fallback: Get first workspace if not specified
+    // Fallback: Check cookie if param is missing
+    if (!workspaceId) {
+        const cookieStore = await cookies();
+        workspaceId = cookieStore.get("unified_workspace_id")?.value;
+    }
+
+    // Fallback: Get first workspace if still not specified
     if (!workspaceId) {
         const firstMembership = await prisma.workspaceMember.findFirst({
             where: { userId },

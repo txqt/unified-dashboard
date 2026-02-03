@@ -123,3 +123,13 @@ export async function deleteWorkspace(formData: FormData) {
     revalidatePath("/dashboard");
     return { success: true };
 }
+
+export async function switchWorkspace(workspaceId: string) {
+    const cookieStore = await import("next/headers").then(mod => mod.cookies());
+    cookieStore.set("unified_workspace_id", workspaceId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+        httpOnly: true,
+        sameSite: "lax",
+    });
+}
