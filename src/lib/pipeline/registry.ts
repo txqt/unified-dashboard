@@ -3,12 +3,16 @@ import { MetricFetcher, MetricNormalizer, RawMetricData, UnifiedMetricSnapshot }
 import { SentryFetcher } from "./fetchers/sentry-fetcher";
 import { VercelFetcher } from "./fetchers/vercel-fetcher";
 import { PostHogFetcher } from "./fetchers/posthog-fetcher";
+import { StripeFetcher } from "./fetchers/stripe-fetcher";
+import { IntercomFetcher } from "./fetchers/intercom-fetcher";
 
 export class PipelineRegistry {
     private static fetchers: Record<string, MetricFetcher> = {
         [IntegrationProvider.SENTRY]: new SentryFetcher(),
         [IntegrationProvider.VERCEL]: new VercelFetcher(),
         [IntegrationProvider.POSTHOG]: new PostHogFetcher(),
+        [IntegrationProvider.STRIPE]: new StripeFetcher(),
+        [IntegrationProvider.INTERCOM]: new IntercomFetcher(),
     };
 
     static getFetcher(provider: IntegrationProvider): MetricFetcher {
@@ -21,21 +25,21 @@ export class PipelineRegistry {
         if (provider === IntegrationProvider.VERCEL) {
             return new VercelNormalizer();
         }
-        if (provider === IntegrationProvider.POSTHOG) {
-            return new PostHogNormalizer();
-        }
-        return new SentryNormalizer();
+        // Default handle generic value/count metrics
+        return new GenericNormalizer();
     }
 }
 
-export class SentryNormalizer implements MetricNormalizer {
+export class GenericNormalizer implements MetricNormalizer {
     normalize(data: RawMetricData, metricKey: string): UnifiedMetricSnapshot[] {
-        const typedData = data as { count: number; timestamp: string };
+        const typedData = data as { value?: number; count?: number; timestamp: string; currency?: string };
+        const val = typedData.value ?? typedData.count ?? 0;
 
         return [{
             metricKey,
-            value: typedData.count,
+            value: val,
             capturedAt: new Date(typedData.timestamp),
+            metadata: typedData.currency ? { currency: typedData.currency } : undefined
         }];
     }
 }
@@ -53,14 +57,3 @@ export class VercelNormalizer implements MetricNormalizer {
     }
 }
 
-export class PostHogNormalizer implements MetricNormalizer {
-    normalize(data: RawMetricData, metricKey: string): UnifiedMetricSnapshot[] {
-        const typedData = data as { value: number; timestamp: string };
-
-        return [{
-            metricKey,
-            value: typedData.value,
-            capturedAt: new Date(typedData.timestamp),
-        }];
-    }
-}
