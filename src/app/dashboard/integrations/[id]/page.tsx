@@ -4,7 +4,10 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { IntegrationStatus } from "@prisma/client";
 import { IntegrationSettingsForm } from "@/components/dashboard/integrations/integration-settings-form";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface IntegrationDetailsPageProps {
     params: Promise<{ id: string }>;
@@ -40,44 +43,53 @@ export default async function IntegrationDetailsPage({ params }: IntegrationDeta
         notFound();
     }
 
+    const getStatusVariant = (status: IntegrationStatus) => {
+        switch (status) {
+            case IntegrationStatus.ACTIVE: return "success";
+            case IntegrationStatus.ERROR: return "destructive";
+            case IntegrationStatus.DISCONNECTED: return "secondary";
+            default: return "warning";
+        }
+    };
+
     return (
-        <div className="max-w-3xl mx-auto py-8 px-4">
-            <div className="mb-8">
-                <Link
-                    href={`/dashboard/integrations?workspace=${integration.workspaceId}`}
-                    className="inline-flex items-center text-sm text-gray-400 hover:text-white mb-4 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Integrations
-                </Link>
+        <div className="max-w-3xl mx-auto py-8 px-4 space-y-8">
+            <div className="space-y-4">
+                <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
+                    <Link href={`/dashboard/integrations?workspace=${integration.workspaceId}`}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Integrations
+                    </Link>
+                </Button>
                 <div className="flex items-center justify-between">
-                    <div>
+                    <div className="space-y-1">
                         <h1 className="text-2xl font-bold flex items-center gap-3">
                             {integration.provider} Integration
-                            <span className={`text-xs px-2 py-1 rounded-full border ${integration.status === IntegrationStatus.ACTIVE
-                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                    : integration.status === IntegrationStatus.ERROR
-                                        ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                        : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                }`}>
+                            <Badge variant={getStatusVariant(integration.status)}>
                                 {integration.status}
-                            </span>
+                            </Badge>
                         </h1>
-                        <p className="text-gray-400 mt-1">
+                        <p className="text-muted-foreground">
                             Configure settings for your {integration.provider} connection.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-                <h2 className="text-lg font-semibold mb-6">Configuration</h2>
-                <IntegrationSettingsForm integration={integration} />
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <IntegrationSettingsForm integration={integration} />
+                </CardContent>
+            </Card>
 
-            <div className="mt-8 bg-blue-500/5 border border-blue-500/10 rounded-lg p-4">
-                <h3 className="text-blue-400 font-medium mb-2">Troubleshooting</h3>
-                <p className="text-sm text-gray-400">
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-400">
+                <h3 className="font-medium mb-1 flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> Troubleshooting
+                </h3>
+                <p className="text-blue-300/80">
                     If your data isn't syncing, check the <strong>Project ID</strong> / <strong>Slug</strong> above.
                     Ensure it exactly matches the ID from your provider's URL.
                 </p>

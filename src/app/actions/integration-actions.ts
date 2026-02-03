@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
@@ -11,12 +12,19 @@ export async function deleteIntegration(formData: FormData) {
         return { error: "Unauthorized" };
     }
 
-    const integrationId = formData.get("integrationId") as string;
-    const workspaceId = formData.get("workspaceId") as string;
+    const validation = z.object({
+        integrationId: z.string().cuid(),
+        workspaceId: z.string().cuid()
+    }).safeParse({
+        integrationId: formData.get("integrationId"),
+        workspaceId: formData.get("workspaceId")
+    });
 
-    if (!integrationId || !workspaceId) {
-        return { error: "Missing required fields (integrationId, workspaceId)" };
+    if (!validation.success) {
+        return { error: "Invalid ID format" };
     }
+
+    const { integrationId, workspaceId } = validation.data;
 
     // Check permissions
     const membership = await prisma.workspaceMember.findUnique({

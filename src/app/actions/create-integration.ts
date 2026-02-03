@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { IntegrationService } from "@/lib/services/integration-service";
 import { IntegrationProvider } from "@prisma/client";
+import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
 
 export async function createIntegration(_prevState: any, formData: FormData) {
@@ -12,15 +13,27 @@ export async function createIntegration(_prevState: any, formData: FormData) {
         return { error: "Unauthorized" };
     }
 
-    const workspaceId = formData.get("workspaceId") as string;
-    const provider = formData.get("provider") as IntegrationProvider;
-    const secretValue = formData.get("secretValue") as string;
-    const projectSlug = formData.get("projectSlug") as string;
-    const orgSlug = formData.get("orgSlug") as string;
+    const schema = z.object({
+        workspaceId: z.string().cuid(),
+        provider: z.nativeEnum(IntegrationProvider),
+        secretValue: z.string().min(1, "Secret value is required"),
+        projectSlug: z.string().optional(),
+        orgSlug: z.string().optional(),
+    });
 
-    if (!workspaceId || !provider || !secretValue) {
-        return { error: "Missing required fields" };
+    const parseResult = schema.safeParse({
+        workspaceId: formData.get("workspaceId"),
+        provider: formData.get("provider"),
+        secretValue: formData.get("secretValue"),
+        projectSlug: formData.get("projectSlug"),
+        orgSlug: formData.get("orgSlug"),
+    });
+
+    if (!parseResult.success) {
+        return { error: "Invalid input data: " + parseResult.error.issues.map(i => i.path + ": " + i.message).join(", ") };
     }
+
+    const { workspaceId, provider, secretValue, projectSlug, orgSlug } = parseResult.data;
 
     // Construct metadata based on provider
     const publicMetadata: Record<string, unknown> = {

@@ -5,6 +5,16 @@ import { formatDistanceToNow } from "date-fns";
 import { deleteIntegration } from "@/app/actions/integration-actions";
 import Link from "next/link";
 import { IntegrationStatus } from "@prisma/client";
+import { Button } from "@/components/ui/button";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Settings, Trash2 } from "lucide-react";
 
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
     const { userId } = await auth();
@@ -23,9 +33,11 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
             workspaceId = firstMembership.workspaceId;
         } else {
             return (
-                <div className="p-8 text-center">
-                    <p>No workspaces found.</p>
-                    <Link href="/dashboard/workspaces/new" className="text-blue-500 underline">Create Workspace</Link>
+                <div className="flex flex-col items-center justify-center min-h-[50dvh] space-y-4">
+                    <p className="text-muted-foreground">No workspaces found.</p>
+                    <Button asChild>
+                        <Link href="/dashboard/workspaces/new">Create Workspace</Link>
+                    </Button>
                 </div>
             );
         }
@@ -42,75 +54,94 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         select: { name: true }
     });
 
+    const getStatusVariant = (status: IntegrationStatus) => {
+        switch (status) {
+            case IntegrationStatus.ACTIVE: return "success";
+            case IntegrationStatus.ERROR: return "destructive";
+            case IntegrationStatus.DISCONNECTED: return "secondary";
+            default: return "warning";
+        }
+    };
+
     return (
-        <div className="max-w-5xl mx-auto py-8 px-4">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold">Integrations</h1>
-                    <p className="text-gray-400 text-sm">Managing integrations for <span className="text-white font-medium">{workspace?.name}</span></p>
+        <div className="max-w-5xl mx-auto py-8 px-4 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+                    <p className="text-muted-foreground">
+                        Manage integrations for <span className="font-medium text-foreground">{workspace?.name}</span>
+                    </p>
                 </div>
-                <Link
-                    href={`/dashboard/integrations/new?workspace=${workspaceId}`}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-                >
-                    Add Integration
-                </Link>
+                <Button asChild>
+                    <Link href={`/dashboard/integrations/new?workspace=${workspaceId}`}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Integration
+                    </Link>
+                </Button>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid gap-4">
                 {integrations.map((integration) => (
-                    <div key={integration.id} className="bg-white/5 border border-white/10 rounded-lg p-6 flex justify-between items-center">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h3 className="font-semibold text-lg">{integration.provider}</h3>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${integration.status === IntegrationStatus.ACTIVE ? 'bg-green-500/20 text-green-300' :
-                                    integration.status === IntegrationStatus.ERROR ? 'bg-red-500/20 text-red-300' :
-                                        'bg-yellow-500/20 text-yellow-300'
-                                    }`}>
-                                    {integration.status}
-                                </span>
+                    <Card key={integration.id}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <div className="space-y-1">
+                                <CardTitle className="text-xl flex items-center gap-3">
+                                    {integration.provider}
+                                    <Badge variant={getStatusVariant(integration.status)}>
+                                        {integration.status}
+                                    </Badge>
+                                </CardTitle>
+                                <CardDescription>
+                                    Added {formatDistanceToNow(integration.createdAt)} ago
+                                </CardDescription>
                             </div>
-                            <div className="text-sm text-gray-400 mt-1">
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/dashboard/integrations/${integration.id}`}>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        Manage
+                                    </Link>
+                                </Button>
+
+                                <form action={async (formData) => {
+                                    "use server"
+                                    await deleteIntegration(formData)
+                                }}>
+                                    <input type="hidden" name="integrationId" value={integration.id} />
+                                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                                    <Button
+                                        type="submit"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </form>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-sm text-muted-foreground flex gap-4">
                                 {integration.publicMetadata && (
-                                    <span className="mr-4">
+                                    <span>
                                         Project: {(integration.publicMetadata as any).projectSlug || 'N/A'}
                                     </span>
                                 )}
                                 <span>{integration._count.metricSeries} Metrics</span>
-                                <span className="mx-2">•</span>
-                                <span>Added {formatDistanceToNow(integration.createdAt)} ago</span>
                             </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <Link
-                                href={`/dashboard/integrations/${integration.id}`}
-                                className="text-gray-400 hover:text-white px-3 py-1 text-sm transition-colors border border-white/10 hover:border-white/30 rounded"
-                            >
-                                Manage
-                            </Link>
-
-                            <form action={async (formData) => {
-                                "use server"
-                                await deleteIntegration(formData)
-                            }}>
-                                <input type="hidden" name="integrationId" value={integration.id} />
-                                <input type="hidden" name="workspaceId" value={workspaceId} />
-                                <button
-                                    type="submit"
-                                    className="text-gray-500 hover:text-red-500 px-3 py-1 text-sm transition-colors border border-transparent hover:border-red-500/20 rounded"
-                                >
-                                    Remove
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
             {integrations.length === 0 && (
-                <div className="text-center py-12 text-gray-500 bg-white/5 rounded-lg border border-dashed border-white/10">
-                    <p>No integrations connected.</p>
+                <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-white/10 rounded-lg bg-white/5 space-y-4">
+                    <p className="text-muted-foreground">No integrations connected yet.</p>
+                    <Button variant="outline" asChild>
+                        <Link href={`/dashboard/integrations/new?workspace=${workspaceId}`}>
+                            Connect your first integration
+                        </Link>
+                    </Button>
                 </div>
             )}
         </div>

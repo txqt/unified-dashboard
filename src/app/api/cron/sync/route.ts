@@ -6,10 +6,13 @@ export const dynamic = "force-dynamic"; // Ensure not cached
 export async function GET(request: Request) {
     // Simple auth check for Cron
     const authHeader = request.headers.get("authorization");
-    if (
-        process.env.CRON_SECRET &&
-        authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
+    const secret = process.env.CRON_SECRET;
+
+    if (!secret) {
+        return new NextResponse("Cron Secret Not Configured", { status: 500 });
+    }
+
+    if (authHeader !== `Bearer ${secret}`) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
