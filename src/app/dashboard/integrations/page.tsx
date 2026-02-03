@@ -82,19 +82,28 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                             </div>
                         </div>
 
-                        <form action={async (formData) => {
-                            "use server"
-                            await deleteIntegration(formData)
-                        }}>
-                            <input type="hidden" name="integrationId" value={integration.id} />
-                            <input type="hidden" name="workspaceId" value={workspaceId} />
-                            <button
-                                type="submit"
-                                className="text-gray-500 hover:text-red-500 px-3 py-1 text-sm transition-colors border border-transparent hover:border-red-500/20 rounded"
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href={`/dashboard/integrations/${integration.id}`}
+                                className="text-gray-400 hover:text-white px-3 py-1 text-sm transition-colors border border-white/10 hover:border-white/30 rounded"
                             >
-                                Remove
-                            </button>
-                        </form>
+                                Manage
+                            </Link>
+
+                            <form action={async (formData) => {
+                                "use server"
+                                await deleteIntegration(formData)
+                            }}>
+                                <input type="hidden" name="integrationId" value={integration.id} />
+                                <input type="hidden" name="workspaceId" value={workspaceId} />
+                                <button
+                                    type="submit"
+                                    className="text-gray-500 hover:text-red-500 px-3 py-1 text-sm transition-colors border border-transparent hover:border-red-500/20 rounded"
+                                >
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 ))}
             </div>
