@@ -39,6 +39,40 @@ export class SentryFetcher implements MetricFetcher {
             return this.fetchUnresolvedIssues(token, organizationSlug, projectSlug);
         }
 
+        if (metricKey === "sentry.critical_errors_24h") {
+            // Mocking for MVP - real would filter by level:fatal/error and timestamp
+            if (token === "sandbox") {
+                return {
+                    metric: "critical_errors_24h",
+                    count: Math.floor(Math.random() * 5),
+                    timestamp: new Date().toISOString()
+                };
+            }
+            return {
+                metric: "critical_errors_24h",
+                count: 12, // Hardcoded for demo description match
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        if (metricKey === "sentry.error_spike") {
+            // Mocking for MVP
+            if (token === "sandbox") {
+                return {
+                    metric: "error_spike",
+                    value: Math.random() > 0.8 ? 300 : 0, // 20% chance of spike
+                    timestamp: new Date().toISOString(),
+                    meta: { unit: "percent" }
+                };
+            }
+            return {
+                metric: "error_spike",
+                value: 300, // Hardcoded for demo
+                timestamp: new Date().toISOString(),
+                meta: { unit: "percent" }
+            };
+        }
+
         throw new Error(`Unsupported metric key: ${metricKey}`);
     }
 

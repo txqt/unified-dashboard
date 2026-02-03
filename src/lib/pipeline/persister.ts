@@ -29,6 +29,7 @@ export class PrismaMetricPersister implements MetricPersister {
                     seriesId,
                     value: s.value,
                     capturedAt: s.capturedAt,
+                    metadata: (s.metadata ?? undefined) as any, // Cast to any to satisfy Prisma Json type
                 })),
             });
 

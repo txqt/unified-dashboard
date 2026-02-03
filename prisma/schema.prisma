@@ -133,6 +133,7 @@ model MetricSnapshot {
   seriesId   String
   value      Float
   capturedAt DateTime @default(now())
+  metadata   Json?
 
   // Relations
   series MetricSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)

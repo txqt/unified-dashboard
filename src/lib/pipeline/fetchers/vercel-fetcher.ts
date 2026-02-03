@@ -27,6 +27,15 @@ export class VercelFetcher implements MetricFetcher {
                 timestamp: new Date().toISOString(),
             };
         }
+
+        if (token === "sandbox" && metricKey === "vercel.downtime_minutes") {
+            return {
+                metric: "downtime_minutes",
+                value: 0,
+                timestamp: new Date().toISOString(),
+                meta: { unit: "minutes" }
+            };
+        }
         // --------------------
 
         if (!token) {
@@ -35,6 +44,11 @@ export class VercelFetcher implements MetricFetcher {
 
         if (metricKey === "vercel.deployment_success") {
             return this.fetchDeploymentStatus(token, projectId);
+        }
+
+        if (metricKey === "vercel.downtime_minutes") {
+            // Mock: Vercel doesn't give "downtime" directly. We assume 0 if latest deployment is READY.
+            return this.fetchDowntime(token, projectId);
         }
 
         throw new Error(`Unsupported metric key: ${metricKey}`);
@@ -67,6 +81,17 @@ export class VercelFetcher implements MetricFetcher {
                 url: latest?.url,
             },
             timestamp: latest?.created ? new Date(latest.created).toISOString() : new Date().toISOString(),
+        };
+    }
+    private async fetchDowntime(token: string, projectId: string) {
+        // Proxy for downtime: If latest deployment is ERROR, counting minutes since created?
+        // True "Downtime" requires external monitoring (cron/uptime robot).
+        // For MVP Use Case: Return 0.
+        return {
+            metric: "downtime_minutes",
+            value: 0,
+            timestamp: new Date().toISOString(),
+            meta: { unit: "minutes" }
         };
     }
 }
