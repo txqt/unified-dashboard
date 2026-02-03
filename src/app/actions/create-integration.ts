@@ -33,8 +33,8 @@ export async function createIntegration(_prevState: ActionState | null, formData
         workspaceId: formData.get("workspaceId"),
         provider: formData.get("provider"),
         secretValue: formData.get("secretValue"),
-        projectSlug: formData.get("projectSlug"),
-        orgSlug: formData.get("orgSlug"),
+        projectSlug: formData.get("projectSlug") || undefined,
+        orgSlug: formData.get("orgSlug") || undefined,
     });
 
     if (!parseResult.success) {
