@@ -23,22 +23,42 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
     if (!userId) redirect("/sign-in");
 
     const params = await searchParams;
-    let workspaceId = params.workspace;
+    // 1. Determine potential workspaceId
+    let candidateId = params.workspace;
 
-    // Fallback: Check cookie if param is missing
-    if (!workspaceId) {
+    if (!candidateId) {
         const cookieStore = await cookies();
-        workspaceId = cookieStore.get("unified_workspace_id")?.value;
+        candidateId = cookieStore.get("unified_workspace_id")?.value;
     }
 
-    // Fallback: Get first workspace if still not specified
-    if (!workspaceId) {
+    // 2. Verify existence and access
+    let workspace = null;
+    if (candidateId) {
+        // Ensure user actually belongs to this workspace
+        const membership = await prisma.workspaceMember.findUnique({
+            where: {
+                workspaceId_userId: {
+                    workspaceId: candidateId,
+                    userId
+                }
+            },
+            include: { workspace: true }
+        });
+        if (membership) {
+            workspace = membership.workspace;
+        }
+    }
+
+    // 3. Fallback: Get first workspace if verify failed
+    if (!workspace) {
         const firstMembership = await prisma.workspaceMember.findFirst({
             where: { userId },
-            orderBy: { workspace: { createdAt: 'desc' } }
+            orderBy: { workspace: { createdAt: 'desc' } },
+            include: { workspace: true }
         });
+
         if (firstMembership) {
-            workspaceId = firstMembership.workspaceId;
+            workspace = firstMembership.workspace;
         } else {
             return (
                 <div className="flex flex-col items-center justify-center min-h-[50dvh] space-y-4">
@@ -51,15 +71,12 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         }
     }
 
+    const workspaceId = workspace.id;
+
     const integrations = await prisma.integration.findMany({
         where: { workspaceId },
         orderBy: { createdAt: 'desc' },
         include: { _count: { select: { metricSeries: true } } }
-    });
-
-    const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { name: true }
     });
 
     const getStatusVariant = (status: IntegrationStatus) => {

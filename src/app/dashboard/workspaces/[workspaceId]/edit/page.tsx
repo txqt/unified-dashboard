@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
-import { updateWorkspace, deleteWorkspace } from "@/app/actions/workspace-actions";
+import { updateWorkspace } from "@/app/actions/workspace-actions";
 import Link from "next/link";
+import { DeleteWorkspaceButton } from "@/components/dashboard/delete-workspace-button";
 
 export default async function WorkspaceEditPage({ params }: { params: Promise<{ workspaceId: string }> }) {
     const { userId } = await auth();
@@ -70,23 +71,7 @@ export default async function WorkspaceEditPage({ params }: { params: Promise<{ 
                     Deleting a workspace is permanent and will remove all associated integrations and metrics.
                 </p>
 
-                <form action={async (formData) => {
-                    "use server"
-                    await deleteWorkspace(formData)
-                }}>
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <button
-                        type="submit"
-                        className="bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/50 px-4 py-2 rounded transition-all"
-                        onClick={() => {
-                            // This is a server component, so we can't easily add confirm() here without a client wrapper.
-                            // For MVP, we'll trust the user or they can revert if we had soft delete (we don't).
-                            // Ideally this button would be a client component.
-                        }}
-                    >
-                        Delete Workspace
-                    </button>
-                </form>
+                <DeleteWorkspaceButton workspaceId={workspace.id} />
             </div>
         </div>
     );
