@@ -43,41 +43,60 @@ export class IntegrationService {
             });
 
             // 3. Auto-provision default metrics
-            if (provider === "SENTRY") {
+            // 3. Auto-provision default metrics
+            const settings = {
+                organizationSlug: (publicMetadata?.organizationSlug as string) || "",
+                projectSlug: (publicMetadata?.projectSlug as string) || "",
+                projectId: (publicMetadata?.projectSlug as string) || "" // Vercel/PostHog often use projectSlug as ID
+            };
+
+            const metricsToCreate: { key: string, name: string }[] = [];
+
+            switch (provider) {
+                case "SENTRY":
+                    metricsToCreate.push(
+                        { key: "sentry.unresolved_issues", name: "Unresolved Issues" },
+                        { key: "sentry.critical_errors_24h", name: "Critical Errors" },
+                        { key: "sentry.error_spike", name: "Error Spike Detection" }
+                    );
+                    break;
+                case "VERCEL":
+                    metricsToCreate.push(
+                        { key: "vercel.deployment_success", name: "Production Deployment" },
+                        { key: "vercel.downtime_minutes", name: "Downtime Minutes" }
+                    );
+                    break;
+                case "POSTHOG":
+                    metricsToCreate.push(
+                        { key: "posthog.events_last_hour", name: "Total Events (1h)" },
+                        { key: "posthog.user_signups", name: "User Signups" },
+                        { key: "posthog.conversion_rate", name: "Conversion Rate" }
+                    );
+                    break;
+                case "STRIPE":
+                    metricsToCreate.push(
+                        { key: "stripe.revenue", name: "Today Revenue" },
+                        { key: "stripe.mrr", name: "MRR" },
+                        { key: "stripe.churn", name: "Churn" },
+                        { key: "stripe.new_trials", name: "New Trials" }
+                    );
+                    break;
+                case "INTERCOM":
+                    metricsToCreate.push(
+                        { key: "intercom.open_tickets", name: "Open Tickets" },
+                        { key: "intercom.average_reply_time", name: "Avg Reply Time" }
+                    );
+                    break;
+            }
+
+            for (const m of metricsToCreate) {
                 await tx.metricSeries.create({
                     data: {
                         workspaceId,
                         integrationId: integration.id,
-                        metricKey: "sentry.unresolved_issues",
-                        displayName: "Unresolved Issues",
-                        settings: {
-                            organizationSlug: (publicMetadata?.organizationSlug as string) || "",
-                            projectSlug: (publicMetadata?.projectSlug as string) || ""
-                        }
-                    }
-                });
-            } else if (provider === "VERCEL") {
-                await tx.metricSeries.create({
-                    data: {
-                        workspaceId,
-                        integrationId: integration.id,
-                        metricKey: "vercel.deployment_success",
-                        displayName: "Production Deployment",
-                        settings: {
-                            projectId: (publicMetadata?.projectSlug as string) || ""
-                        }
-                    }
-                });
-            } else if (provider === "POSTHOG") {
-                await tx.metricSeries.create({
-                    data: {
-                        workspaceId,
-                        integrationId: integration.id,
-                        metricKey: "posthog.events_last_hour",
-                        displayName: "Total Events (1h)",
-                        settings: {
-                            projectId: (publicMetadata?.projectSlug as string) || ""
-                        }
+                        metricKey: m.key,
+                        displayName: m.name,
+                        settings: settings
                     }
                 });
             }

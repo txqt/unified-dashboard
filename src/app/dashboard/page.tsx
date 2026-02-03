@@ -50,42 +50,55 @@ export default async function DashboardPage() {
     const allSeries = activeWorkspaceData?.metricSeries || [];
 
     // --- ORGANIZE METRICS BY CATEGORY ---
-    const getMetricValue = (key: string) => {
+    const getMetric = (key: string) => {
         const series = allSeries.find(s => s.metricKey === key);
-        if (!series || !series.snapshots[0]) return null;
-        return series.snapshots[0];
+        if (!series) return null;
+
+        const snapshot = series.snapshots[0];
+
+        return {
+            exists: true,
+            value: snapshot?.value ?? 0,
+            hasData: !!snapshot,
+            metadata: (snapshot?.metadata as any) || {},
+            capturedAt: snapshot?.capturedAt
+        };
     };
 
     // Revenue (Stripe)
-    const revenueSnapshot = getMetricValue("stripe.revenue");
-    const mrrSnapshot = getMetricValue("stripe.mrr");
-    const churnSnapshot = getMetricValue("stripe.churn");
-    const trialsSnapshot = getMetricValue("stripe.new_trials");
+    const revenue = getMetric("stripe.revenue");
+    const mrr = getMetric("stripe.mrr");
+    const churn = getMetric("stripe.churn");
+    const trials = getMetric("stripe.new_trials");
 
     // Errors (Sentry)
-    const errorsSnapshot = getMetricValue("sentry.unresolved_issues");
-    const criticalErrorsSnapshot = getMetricValue("sentry.critical_errors_24h");
-    const errorSpikeSnapshot = getMetricValue("sentry.error_spike");
+    const errors = getMetric("sentry.unresolved_issues");
+    const criticalErrors = getMetric("sentry.critical_errors_24h");
+    const errorSpike = getMetric("sentry.error_spike");
 
     // Support (Intercom)
-    const openTicketsSnapshot = getMetricValue("intercom.open_tickets");
-    const replyTimeSnapshot = getMetricValue("intercom.average_reply_time");
+    const openTickets = getMetric("intercom.open_tickets");
+    const replyTime = getMetric("intercom.average_reply_time");
 
     // Growth (PostHog)
-    const conversionSnapshot = getMetricValue("posthog.conversion_rate");
-    const signupsSnapshot = getMetricValue("posthog.user_signups");
-    const trafficSnapshot = getMetricValue("posthog.events_last_hour");
+    const conversion = getMetric("posthog.conversion_rate");
+    const signups = getMetric("posthog.user_signups");
+    const traffic = getMetric("posthog.events_last_hour");
 
     // Ops (Vercel)
-    const deployStatusSnapshot = getMetricValue("vercel.deployment_success");
-    const downtimeSnapshot = getMetricValue("vercel.downtime_minutes");
+    const deployStatus = getMetric("vercel.deployment_success");
+    const downtime = getMetric("vercel.downtime_minutes");
 
     // Simple status helpers
-    const getRevenueStatus = (val: number) => val > 2000 ? "success" : (val > 1000 ? "warning" : "error");
-    const getErrorStatus = (val: number) => val === 0 ? "success" : (val < 10 ? "warning" : "error");
-    const getSupportStatus = (val: number) => val === 0 ? "success" : (val < 5 ? "warning" : "error");
-    const getGrowthStatus = (val: number) => val > 2 ? "success" : "neutral";
-    const getOpsStatus = (val: number) => val === 1 ? "success" : "error";
+    const getRevenueStatus = (m: any) => {
+        if (!m || !m.hasData) return "neutral";
+        const val = m.value;
+        return val > 2000 ? "success" : (val > 1000 ? "warning" : "error");
+    };
+
+    // ... other helpers would need similar updates or just use raw value if handled inline
+    const formatCurrency = (val: number) => `$${val.toLocaleString()}`;
+    const formatPercent = (val: number) => `${val.toFixed(1)}%`;
 
     return (
         <div className="space-y-8 pb-20">
@@ -139,30 +152,30 @@ export default async function DashboardPage() {
                         <h3 className="col-span-full text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                             <CreditCard className="w-4 h-4" /> Revenue
                         </h3>
-                        {revenueSnapshot && (
+                        {revenue && (
                             <StatusCard
                                 title="Today's Revenue"
-                                value={`$${revenueSnapshot.value.toLocaleString()}`}
+                                value={revenue.hasData ? formatCurrency(revenue.value) : "--"}
                                 metricKey="stripe.revenue"
-                                status={getRevenueStatus(revenueSnapshot.value)}
+                                status={getRevenueStatus(revenue)}
                                 subtext="Daily Total"
                                 icon={Wallet}
                                 className="md:col-span-2 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 hover:from-indigo-500/10 hover:to-purple-500/10 border-indigo-500/10"
                             />
                         )}
-                        {mrrSnapshot && (
+                        {mrr && (
                             <StatusCard
                                 title="MRR"
-                                value={`$${mrrSnapshot.value.toLocaleString()}`}
+                                value={mrr.hasData ? formatCurrency(mrr.value) : "--"}
                                 metricKey="stripe.mrr"
-                                status={getRevenueStatus(mrrSnapshot.value)}
+                                status={getRevenueStatus(mrr)}
                                 icon={TrendingUp}
                             />
                         )}
-                        {trialsSnapshot && (
+                        {trials && (
                             <StatusCard
                                 title="New Trials"
-                                value={trialsSnapshot.value}
+                                value={trials.hasData ? trials.value : "--"}
                                 metricKey="stripe.new_trials"
                                 status="neutral"
                                 subtext="Potential Users"
@@ -178,7 +191,7 @@ export default async function DashboardPage() {
                         </h3>
 
                         {/* Red Button Spike Alert */}
-                        {errorSpikeSnapshot && errorSpikeSnapshot.value > 100 && (
+                        {errorSpike && errorSpike.hasData && errorSpike.value > 100 && (
                             <div className="col-span-full rounded-2xl bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 p-6 flex items-center justify-between animate-pulse cursor-pointer hover:bg-red-500/25 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 bg-red-500/20 rounded-xl">
@@ -186,29 +199,29 @@ export default async function DashboardPage() {
                                     </div>
                                     <div>
                                         <h4 className="text-white font-bold text-lg">CRITICAL SPIKE DETECTED</h4>
-                                        <p className="text-red-200 text-sm">Errors up +{errorSpikeSnapshot.value}% in last hour</p>
+                                        <p className="text-red-200 text-sm">Errors up +{errorSpike.value}% in last hour</p>
                                     </div>
                                     <div className="text-4xl">🔥</div>
                                 </div>
                             </div>
                         )}
 
-                        {criticalErrorsSnapshot && (
+                        {criticalErrors && (
                             <StatusCard
                                 title="Critical Errors"
-                                value={criticalErrorsSnapshot.value}
+                                value={criticalErrors.hasData ? criticalErrors.value : "--"}
                                 metricKey="sentry.critical_errors_24h"
-                                status={criticalErrorsSnapshot.value === 0 ? "success" : "error"}
+                                status={!criticalErrors.hasData ? "neutral" : (criticalErrors.value === 0 ? "success" : "error")}
                                 subtext="Last 24h"
                                 icon={AlertOctagon}
                             />
                         )}
-                        {downtimeSnapshot && (
+                        {downtime && (
                             <StatusCard
                                 title="Downtime"
-                                value={`${downtimeSnapshot.value}m`}
+                                value={downtime.hasData ? `${downtime.value}m` : "--"}
                                 metricKey="vercel.downtime_minutes"
-                                status={downtimeSnapshot.value === 0 ? "success" : "error"}
+                                status={!downtime.hasData ? "neutral" : (downtime.value === 0 ? "success" : "error")}
                                 icon={ShieldCheck}
                             />
                         )}
@@ -219,41 +232,41 @@ export default async function DashboardPage() {
                         <h3 className="col-span-full text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 mt-4 flex items-center gap-2">
                             <Users className="w-4 h-4" /> Growth & Support
                         </h3>
-                        {signupsSnapshot && (
+                        {signups && (
                             <StatusCard
                                 title="New Signups"
-                                value={signupsSnapshot.value}
+                                value={signups.hasData ? signups.value : "--"}
                                 metricKey="posthog.user_signups"
-                                status="success"
+                                status={signups.hasData ? "success" : "neutral"}
                                 subtext="Last 24h"
                                 icon={Users}
                             />
                         )}
-                        {conversionSnapshot && (
+                        {conversion && (
                             <StatusCard
                                 title="Conversion"
-                                value={`${conversionSnapshot.value.toFixed(1)}%`}
+                                value={conversion.hasData ? formatPercent(conversion.value) : "--"}
                                 metricKey="posthog.conversion_rate"
-                                status={getGrowthStatus(conversionSnapshot.value)}
+                                status={!conversion.hasData ? "neutral" : (conversion.value > 2 ? "success" : "neutral")}
                                 icon={TrendingUp}
                             />
                         )}
-                        {openTicketsSnapshot && (
+                        {openTickets && (
                             <StatusCard
                                 title="Unanswered"
-                                value={openTicketsSnapshot.value}
+                                value={openTickets.hasData ? openTickets.value : "--"}
                                 metricKey="intercom.open_tickets"
-                                status={getSupportStatus(openTicketsSnapshot.value)}
+                                status={!openTickets.hasData ? "neutral" : (openTickets.value === 0 ? "success" : "warning")}
                                 icon={Mail}
                             />
                         )}
                         {/* Churn (grouped with growth as negative growth) */}
-                        {churnSnapshot && (
+                        {churn && (
                             <StatusCard
                                 title="Churn Today"
-                                value={`${churnSnapshot.value}`}
+                                value={churn.hasData ? churn.value : "--"}
                                 metricKey="stripe.churn"
-                                status={churnSnapshot.value === 0 ? "success" : "error"}
+                                status={!churn.hasData ? "neutral" : (churn.value === 0 ? "success" : "error")}
                                 subtext="Users Lost"
                                 icon={Users}
                             />
