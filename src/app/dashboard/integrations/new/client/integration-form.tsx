@@ -29,6 +29,36 @@ export function NewIntegrationForm({
     const [openProjectSelect, setOpenProjectSelect] = useState(false);
     const [selectedProject, setSelectedProject] = useState("");
 
+    const PROVIDER_GUIDES: Record<string, { label: string; url: string; note?: string }> = {
+        SENTRY: {
+            label: "Get Auth Token",
+            url: "https://sentry.io/settings/account/api/auth-tokens/",
+            note: "Scopes required: project:read, org:read"
+        },
+        VERCEL: {
+            label: "Create Access Token",
+            url: "https://vercel.com/account/tokens",
+            note: "Scopes required: deployment:read"
+        },
+        POSTHOG: {
+            label: "Get Personal API Key",
+            url: "https://us.posthog.com/settings/user-api-keys",
+            note: "Create a Personal API Key (not Project Key)"
+        },
+        STRIPE: {
+            label: "Get Restricted Key",
+            url: "https://dashboard.stripe.com/apikeys",
+            note: "Permissions: Balance (Read), Charges (Read)"
+        },
+        INTERCOM: {
+            label: "Get Access Token",
+            url: "https://app.intercom.com/a/apps/_/settings/app-store/private-tokens",
+            note: "Go to Settings -> App Store -> Private tokens"
+        }
+    };
+
+    const guide = PROVIDER_GUIDES[provider];
+
     // Debounce fetching projects when API key changes for Vercel
     useEffect(() => {
         if (provider !== "VERCEL" || apiKey.length < 20) return;
@@ -137,6 +167,20 @@ export function NewIntegrationForm({
                         />
                         <p className="mt-1 text-xs text-slate-500">
                             Stored securely using AES-256 encryption.
+                            {guide && (
+                                <span className="block mt-1">
+                                    Need a key?{" "}
+                                    <a
+                                        href={guide.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-indigo-400 hover:text-indigo-300 underline"
+                                    >
+                                        {guide.label}
+                                    </a>
+                                    {guide.note && <span className="ml-1 text-slate-600">({guide.note})</span>}
+                                </span>
+                            )}
                         </p>
                     </div>
 
