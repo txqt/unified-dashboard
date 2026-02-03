@@ -1,4 +1,5 @@
 import { randomBytes, createCipheriv, createDecipheriv } from "crypto";
+import { env } from "@/env";
 
 const ALGORITHM = "aes-256-gcm";
 const KEY_LENGTH = 32; // 256 bits
@@ -7,12 +8,8 @@ const IV_LENGTH = 12; // 96 bits for GCM
 
 // Ensure ENCRYPTION_KEY is set and valid
 const getMasterKey = () => {
-    const keyBase64 = process.env.ENCRYPTION_KEY;
-    if (!keyBase64) {
-        throw new Error(
-            "ENCRYPTION_KEY is not defined in environment variables. Generate one with `openssl rand -base64 32`"
-        );
-    }
+    const keyBase64 = env.ENCRYPTION_KEY;
+    // Key presence is guaranteed by src/env.ts validation
     const key = Buffer.from(keyBase64, "base64");
     if (key.length !== KEY_LENGTH) {
         throw new Error(

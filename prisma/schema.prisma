@@ -158,6 +158,7 @@ model Alert {
   series        MetricSeries   @relation(fields: [metricSeriesId], references: [id], onDelete: Cascade)
   notifications AlertHistory[]
 
+  @@index([metricSeriesId])
   @@map("alerts")
 }
 

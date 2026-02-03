@@ -1,37 +1,43 @@
 import { prisma } from "@/lib/prisma";
-import { IntegrationStatus } from "@prisma/client";
+import { Integration, IntegrationStatus, MetricSeries } from "@prisma/client";
 import { PipelineRegistry } from "./registry";
 import { PrismaMetricPersister } from "./persister";
+import { logger } from "@/lib/logger";
+
+type SeriesWithIntegration = MetricSeries & { integration: Integration };
 
 export class PipelineWorker {
     private persister = new PrismaMetricPersister();
     private readonly BATCH_SIZE = 20;
 
     async runSync() {
-        console.log("[Pipeline] Starting sync...");
+        logger.info("[Pipeline] Starting sync...");
 
-        // 1. Fetch active metric series IDs only (lighter query)
-        const seriesIds = await prisma.metricSeries.findMany({
+        // 1. Fetch active metric series WITH nested integration data
+        // Optimization: Fetch everything needed in one go instead of N+1 SELECTs
+        const allSeries = await prisma.metricSeries.findMany({
             where: {
                 integration: {
                     status: IntegrationStatus.ACTIVE,
                 },
             },
-            select: { id: true },
+            include: {
+                integration: true,
+            },
         });
 
-        console.log(`[Pipeline] Found ${seriesIds.length} series to process.`);
+        logger.info(`[Pipeline] Found ${allSeries.length} series to process.`);
 
         const results: PromiseSettledResult<{ seriesId: string; status: string; count: number; }>[] = [];
 
         // 2. Process in batches
-        for (let i = 0; i < seriesIds.length; i += this.BATCH_SIZE) {
-            const batch = seriesIds.slice(i, i + this.BATCH_SIZE);
-            console.log(`[Pipeline] Processing batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(seriesIds.length / this.BATCH_SIZE)}...`);
+        for (let i = 0; i < allSeries.length; i += this.BATCH_SIZE) {
+            const batch = allSeries.slice(i, i + this.BATCH_SIZE);
+            logger.info(`[Pipeline] Processing batch ${Math.floor(i / this.BATCH_SIZE) + 1}/${Math.ceil(allSeries.length / this.BATCH_SIZE)}...`);
 
             const batchResults = await Promise.allSettled(
-                batch.map(async ({ id }) => {
-                    return this.processSeries(id);
+                batch.map(async (series) => {
+                    return this.processSeries(series);
                 })
             );
             results.push(...batchResults);
@@ -43,20 +49,14 @@ export class PipelineWorker {
             failed: results.filter(r => r.status === "rejected").length
         };
 
-        console.log("[Pipeline] Sync complete.", summary);
+        logger.info("[Pipeline] Sync complete.", summary);
         return summary;
     }
 
-    private async processSeries(seriesId: string) {
+    // Now accepts the full series object, avoiding a DB call
+    private async processSeries(series: SeriesWithIntegration) {
         try {
-            // Fetch full details for this single series
-            const series = await prisma.metricSeries.findUnique({
-                where: { id: seriesId },
-                include: { integration: true }
-            });
-
-            if (!series) throw new Error(`Series ${seriesId} not found`);
-
+            // No need to fetch series again here!
             const { integration, metricKey, settings } = series;
             const provider = integration.provider;
 
@@ -77,7 +77,7 @@ export class PipelineWorker {
 
             return { seriesId: series.id, status: "success", count: snapshots.length };
         } catch (error) {
-            console.error(`[Pipeline] Error processing series ${seriesId}:`, error);
+            logger.error(`[Pipeline] Error processing series ${series.id}:`, { error: String(error) });
             throw error;
         }
     }

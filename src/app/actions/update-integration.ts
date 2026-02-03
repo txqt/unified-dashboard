@@ -3,10 +3,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logger } from "@/lib/logger";
 
 export async function updateIntegration(
     integrationId: string,
-    data: { publicMetadata: Record<string, any> }
+    data: { publicMetadata: Record<string, unknown> }
 ) {
     const { userId } = await auth();
     if (!userId) {
@@ -38,14 +39,14 @@ export async function updateIntegration(
         }
 
         // Merge existing metadata with new data
-        // casting to any for prisma json field
-        const currentMetadata = (integration.publicMetadata as Record<string, any>) || {};
+        // casting to known type for prisma json field
+        const currentMetadata = (integration.publicMetadata as Record<string, unknown>) || {};
         const updatedMetadata = { ...currentMetadata, ...data.publicMetadata };
 
         await prisma.integration.update({
             where: { id: integrationId },
             data: {
-                publicMetadata: updatedMetadata,
+                publicMetadata: updatedMetadata as any,
             },
         });
 
@@ -54,7 +55,7 @@ export async function updateIntegration(
 
         return { success: true };
     } catch (error) {
-        console.error("Failed to update integration:", error);
+        logger.error("Failed to update integration:", { error: String(error) });
         return { error: "Failed to update integration" };
     }
 }

@@ -1,13 +1,14 @@
 import { Alert, AlertHistory, AlertType, MetricSeries, Workspace } from "@prisma/client";
 import { AlertDispatcher } from "../dispatcher";
+import { env } from "@/env";
 
 export class TelegramDispatcher implements AlertDispatcher {
     private token: string;
     private chatId: string;
 
     constructor() {
-        this.token = process.env.TELEGRAM_BOT_TOKEN || "";
-        this.chatId = process.env.TELEGRAM_CHAT_ID || "";
+        this.token = env.TELEGRAM_BOT_TOKEN || "";
+        this.chatId = env.TELEGRAM_CHAT_ID || "";
     }
 
     async dispatch(alert: Alert, history: AlertHistory): Promise<void> {

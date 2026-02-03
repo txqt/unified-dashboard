@@ -2,21 +2,18 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { env } from "@/env";
 
 const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
 // Use adapter pattern for Prisma 7 compatibility
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-    throw new Error("DATABASE_URL is not set. Please ensure .env includes a valid connection string.");
-}
+const connectionString = env.DATABASE_URL;
 
 const pool = new Pool({
     connectionString,
-    ssl: connectionString?.includes("supabase.com") || process.env.NODE_ENV === "production"
+    ssl: connectionString?.includes("supabase.com") || env.NODE_ENV === "production"
         ? { rejectUnauthorized: false }
         : false
 });
@@ -28,12 +25,12 @@ export const prisma =
         adapter,
         // Original log config
         log:
-            process.env.NODE_ENV === "development"
+            env.NODE_ENV === "development"
                 ? ["query", "error", "warn"]
                 : ["error"],
     });
 
-if (process.env.NODE_ENV !== "production") {
+if (env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;
 }
 

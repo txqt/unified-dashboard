@@ -6,8 +6,16 @@ import { IntegrationService } from "@/lib/services/integration-service";
 import { IntegrationProvider } from "@prisma/client";
 import { z } from "zod";
 import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
-export async function createIntegration(_prevState: any, formData: FormData) {
+// Define strict return type for the action
+type ActionState = {
+    error?: string;
+    success?: boolean;
+};
+
+export async function createIntegration(_prevState: ActionState | null, formData: FormData): Promise<ActionState> {
     const { userId } = await auth();
     if (!userId) {
         return { error: "Unauthorized" };
@@ -30,6 +38,7 @@ export async function createIntegration(_prevState: any, formData: FormData) {
     });
 
     if (!parseResult.success) {
+        // Structured validation error logging could go here if needed
         return { error: "Invalid input data: " + parseResult.error.issues.map(i => i.path + ": " + i.message).join(", ") };
     }
 
@@ -43,8 +52,6 @@ export async function createIntegration(_prevState: any, formData: FormData) {
     if (provider === "SENTRY" && orgSlug) {
         publicMetadata.organizationSlug = orgSlug;
     }
-
-    const prisma = (await import("@/lib/prisma")).default;
 
     // Check for existing integration to avoid Unique constraint error
     const existing = await prisma.integration.findUnique({
@@ -61,58 +68,27 @@ export async function createIntegration(_prevState: any, formData: FormData) {
     }
 
     try {
-        const integration = await IntegrationService.createIntegration({
+        await IntegrationService.createIntegration({
             workspaceId,
             provider,
             secretValue,
             publicMetadata
         });
 
-        // AUTO-PROVISION METRICS based on Provider
-        // This ensures the user sees something immediately.
-        if (provider === "SENTRY") {
-            await prisma.metricSeries.create({
-                data: {
-                    workspaceId,
-                    integrationId: integration.id,
-                    metricKey: "sentry.unresolved_issues",
-                    displayName: "Unresolved Issues",
-                    settings: {
-                        organizationSlug: orgSlug,
-                        projectSlug: projectSlug
-                    }
-                }
-            });
-        } else if (provider === "VERCEL") {
-            await prisma.metricSeries.create({
-                data: {
-                    workspaceId,
-                    integrationId: integration.id,
-                    metricKey: "vercel.deployment_success",
-                    displayName: "Production Deployment",
-                    settings: { projectId: projectSlug }
-                }
-            });
-        } else if (provider === "POSTHOG") {
-            await prisma.metricSeries.create({
-                data: {
-                    workspaceId,
-                    integrationId: integration.id,
-                    metricKey: "posthog.events_last_hour",
-                    displayName: "Total Events (1h)",
-                    settings: { projectId: projectSlug }
-                }
-            });
-        }
-
         // TRIGGER INITIAL FETCH
-        console.log("Triggering initial sync...");
+        // We do this asynchronously but await it so the user sees data immediately on redirect.
+        // In a larger system, this might be offloaded to a queue (BullMQ/Inngest).
+        logger.info(`[CreateIntegration] Triggering initial sync for workspace ${workspaceId}`);
+
+        // Dynamic import to avoid circular dependencies if any, though likely fine here
         const { PipelineWorker } = await import("@/lib/pipeline/worker");
         const worker = new PipelineWorker();
         await worker.runSync();
 
+        logger.info(`[CreateIntegration] Initial sync complete`);
+
     } catch (error) {
-        console.error("Failed to create integration:", error);
+        logger.error("Failed to create integration", { error: String(error) });
         return { error: error instanceof Error ? error.message : "Failed to create integration" };
     }
 

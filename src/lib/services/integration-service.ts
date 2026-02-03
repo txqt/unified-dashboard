@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { VaultService } from "@/lib/vault";
-import { Integration, IntegrationProvider, IntegrationStatus } from "@prisma/client";
+import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 
 export class IntegrationService {
     /**
@@ -41,6 +41,46 @@ export class IntegrationService {
                     publicMetadata: publicMetadata,
                 },
             });
+
+            // 3. Auto-provision default metrics
+            if (provider === "SENTRY") {
+                await tx.metricSeries.create({
+                    data: {
+                        workspaceId,
+                        integrationId: integration.id,
+                        metricKey: "sentry.unresolved_issues",
+                        displayName: "Unresolved Issues",
+                        settings: {
+                            organizationSlug: (publicMetadata?.organizationSlug as string) || "",
+                            projectSlug: (publicMetadata?.projectSlug as string) || ""
+                        }
+                    }
+                });
+            } else if (provider === "VERCEL") {
+                await tx.metricSeries.create({
+                    data: {
+                        workspaceId,
+                        integrationId: integration.id,
+                        metricKey: "vercel.deployment_success",
+                        displayName: "Production Deployment",
+                        settings: {
+                            projectId: (publicMetadata?.projectSlug as string) || ""
+                        }
+                    }
+                });
+            } else if (provider === "POSTHOG") {
+                await tx.metricSeries.create({
+                    data: {
+                        workspaceId,
+                        integrationId: integration.id,
+                        metricKey: "posthog.events_last_hour",
+                        displayName: "Total Events (1h)",
+                        settings: {
+                            projectId: (publicMetadata?.projectSlug as string) || ""
+                        }
+                    }
+                });
+            }
 
             return integration;
         });
