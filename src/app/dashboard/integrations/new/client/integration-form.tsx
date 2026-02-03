@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useEffect } from "react";
 import { createIntegration } from "@/app/actions/create-integration";
+import { fetchVercelProjects, type VercelProject } from "@/app/actions/fetch-vercel-projects";
+import { ProjectSelector } from "./project-selector";
 
 interface WorkspaceMember {
     workspaceId: string;
@@ -16,6 +18,34 @@ export function NewIntegrationForm({
     members: WorkspaceMember[]
 }) {
     const [state, formAction, isPending] = useActionState(createIntegration, null);
+
+    // Integration Setup State
+    const [provider, setProvider] = useState("SENTRY");
+    const [apiKey, setApiKey] = useState("");
+
+    // Vercel Specific State
+    const [vercelProjects, setVercelProjects] = useState<VercelProject[]>([]);
+    const [isFetchingProjects, setIsFetchingProjects] = useState(false);
+    const [openProjectSelect, setOpenProjectSelect] = useState(false);
+    const [selectedProject, setSelectedProject] = useState("");
+
+    // Debounce fetching projects when API key changes for Vercel
+    useEffect(() => {
+        if (provider !== "VERCEL" || apiKey.length < 20) return;
+
+        const timer = setTimeout(async () => {
+            setIsFetchingProjects(true);
+            const result = await fetchVercelProjects(apiKey);
+            setIsFetchingProjects(false);
+
+            if (result.success && result.projects) {
+                setVercelProjects(result.projects);
+                setOpenProjectSelect(true);
+            }
+        }, 800); // 800ms debounce
+
+        return () => clearTimeout(timer);
+    }, [apiKey, provider]);
 
     return (
         <div className="rounded-xl border border-slate-800 bg-slate-900 p-6">
@@ -73,6 +103,13 @@ export function NewIntegrationForm({
                         </label>
                         <select
                             name="provider"
+                            value={provider}
+                            onChange={(e) => {
+                                setProvider(e.target.value);
+                                setApiKey("");
+                                setVercelProjects([]);
+                                setSelectedProject("");
+                            }}
                             className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
                             required
                         >
@@ -85,12 +122,14 @@ export function NewIntegrationForm({
                     {/* Credentials */}
                     <div>
                         <label className="block text-sm font-medium text-slate-300">
-                            API Token / Key
+                            {provider === "VERCEL" ? "Vercel Access Token" : "API Token / Key"}
                         </label>
                         <input
                             type="password"
                             name="secretValue"
-                            placeholder="ske_..."
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
+                            placeholder={provider === "VERCEL" ? "Paste your token to fetch projects..." : "ske_..."}
                             className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
                             required
                         />
@@ -99,32 +138,58 @@ export function NewIntegrationForm({
                         </p>
                     </div>
 
-                    {/* Metadata (Simulating specific fields for MVP) */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+                    {/* Metadata - Dynamic Fields */}
+                    {provider === "VERCEL" && (
+                        <div className="space-y-2">
                             <label className="block text-sm font-medium text-slate-300">
-                                Project Slug / ID
+                                Select Project
                             </label>
-                            <input
-                                type="text"
-                                name="projectSlug"
-                                placeholder="my-project"
-                                className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
-                                required
+                            <ProjectSelector
+                                projects={vercelProjects}
+                                isOpen={openProjectSelect}
+                                onOpenChange={setOpenProjectSelect}
+                                isLoading={isFetchingProjects}
+                                disabled={apiKey.length < 5}
+                                onSelect={(id, name) => setSelectedProject(name)}
                             />
+                            {/* Hidden input to submit the selected project as projectSlug */}
+                            <input type="hidden" name="projectSlug" value={selectedProject} />
+                            {/* Fallback for manual entry if needed, or if user wants to override */}
+                            {!isFetchingProjects && vercelProjects.length === 0 && apiKey.length > 20 && (
+                                <div className="mt-2 text-xs text-amber-400">
+                                    Could not find projects? Verify your token has proper scopes.
+                                </div>
+                            )}
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-300">
-                                Organization Slug
-                            </label>
-                            <input
-                                type="text"
-                                name="orgSlug"
-                                placeholder="my-org (Sentry only)"
-                                className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
-                            />
+                    )}
+
+                    {/* Standard Fields for Non-Vercel or if user enters manually */}
+                    {provider !== "VERCEL" && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300">
+                                    Project Slug / ID
+                                </label>
+                                <input
+                                    type="text"
+                                    name="projectSlug"
+                                    placeholder="my-project"
+                                    className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300">
+                                    Organization Slug
+                                </label>
+                                <input
+                                    type="text"
+                                    name="orgSlug"
+                                    placeholder="my-org (Sentry only)"
+                                    className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-white focus:border-indigo-500 focus:outline-none"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="pt-4">
                         <button

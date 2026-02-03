@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { WorkspaceSwitcher } from "@/components/dashboard/workspace-switcher";
 
 export default async function DashboardLayout({
     children,
@@ -13,6 +15,14 @@ export default async function DashboardLayout({
     if (!userId) {
         redirect("/sign-in");
     }
+
+    // Fetch user's workspaces
+    const memberships = await prisma.workspaceMember.findMany({
+        where: { userId },
+        include: { workspace: true },
+    });
+
+    const workspaces = memberships.map((m) => m.workspace);
 
     return (
         <div className="min-h-screen bg-slate-950">
@@ -28,26 +38,8 @@ export default async function DashboardLayout({
                             </span>
                         </Link>
 
-                        {/* Workspace Switcher - Placeholder */}
-                        <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-                            <div className="h-5 w-5 rounded bg-indigo-600 text-xs text-white flex items-center justify-center font-medium">
-                                W
-                            </div>
-                            <span className="text-sm text-white">My Workspace</span>
-                            <svg
-                                className="h-4 w-4 text-slate-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </div>
+                        {/* Workspace Switcher */}
+                        <WorkspaceSwitcher workspaces={workspaces} />
                     </div>
 
                     {/* Right Side */}
