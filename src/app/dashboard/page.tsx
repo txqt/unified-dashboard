@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { StatusCard } from "@/components/dashboard/status-card";
+import { RefreshButton } from "@/components/dashboard/refresh-button";
 import { cookies } from "next/headers";
 // Icons
 import { CreditCard, Activity, Users, Zap, AlertOctagon, TrendingUp, Wallet, ShieldCheck, Mail } from "lucide-react";
@@ -117,6 +118,7 @@ export default async function DashboardPage() {
                             <span className="text-xs font-medium text-emerald-400">System Healthy</span>
                         </div>
                     )}
+                    <RefreshButton />
                     <form action="/api/cron/email-report" method="GET">
                         <button type="submit" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all text-sm font-medium">
                             <Mail className="w-4 h-4" />

@@ -1,4 +1,10 @@
 {
     "installCommand": "corepack enable pnpm && pnpm install",
-    "buildCommand": "prisma generate && next build"
+    "buildCommand": "prisma generate && next build",
+    "crons": [
+        {
+            "path": "/api/cron/sync",
+            "schedule": "*/10 * * * *"
+        }
+    ]
 }
